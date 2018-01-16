@@ -1,0 +1,15 @@
+#!/bin/env bash
+
+all_releases() {
+  echo $(
+    curl https://archive.apache.org/dist/kafka/ --silent \
+      | grep 'folder.gif' \
+      | sed -e 's|.*href="\(.*\)/".*|\1|' \
+  )
+}
+
+recent_releases() {
+  all_releases | sed -e 's| old_releases||g'
+}
+
+recent_releases

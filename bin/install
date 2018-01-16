@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+# this is global for error reporting
+ASDF_KAFKA_ERROR=""
+
+# Download the kafka dist from Apache, and unpack archive.
+install_kafka() {
+	local version=$1
+	local dir=$2
+
+	local variant=$(get_variant $version)
+
+	download_kafka $version $variant $dir
+	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
+
+	unpack_kafka $dir
+	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
+}
+
+archive_contents() {
+	local version=$1
+
+	curl https://archive.apache.org/dist/kafka/$version/ -silent \
+		| grep '.*href="kafka.*tgz".*' \
+		| sed -e 's|.*href="\(kafka.*tgz\)".*|\1|'
+}
+
+archive_dists() {
+	local contents=$1
+
+	echo $contents \
+		| sed -e 's| kafka_[-\.0-9]*site-docs\.tgz||' \
+		| sed -e 's| kafka_[-\.0-9]*src\.tgz||'
+}
+
+most_recent_dist() {
+	local dists=$1
+
+	local rev=$(for dist in $dists; do echo $dist; done | tac)
+	echo $rev | cut -d' ' -f1
+}
+
+get_variant() {
+	local version=$1
+
+	local contents=$(archive_contents $version)
+	local dists=$(archive_dists $contents)
+	most_recent_dist $dists
+}
+
+# Download kafka from Apache.
+download_kafka() {
+	local version=$1
+	local variant=$2
+	local dir=$3
+
+	local base=http://archive.apache.org/dist/kafka
+	local url=$base/$version/$variant
+
+	echo "---- ASDF KAFKA MESSAGE ----"
+	echo "downloading: $url"
+
+	curl -fLC - \
+		--silent \
+		--retry 3 \
+		--retry-delay 3 \
+		-o $dir/$variant $url
+
+	[[ $? != 0 ]] && ASDF_KAFKA_ERROR="downloading kafka dist"
+}
+
+# Unarchive a tar archive into the install directory and cleanup.
+#
+# NOTE: Using $origin as a memo rather than executing in a subshell
+#   because errors won't be persisted from a subshell.
+#
+# TODO: Should be sanitized with error reporting.
+unpack_kafka() {
+	local dir=$1
+
+	local origin=$(pwd)
+	cd $dir; {
+		local archive=$(find -name kafka*tgz -printf '%f')
+
+		tar -xzf $archive
+		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="expanding kafka dist"
+
+		rm $archive
+
+		local dist=$(find -name kafka* -printf '%f')
+		mv $dist/* .
+		rm -r $dist
+	}; cd $origin
+}
+
+#
+# MAIN
+#
+install_kafka $ASDF_INSTALL_VERSION $ASDF_INSTALL_PATH
+
+if ! [[ -z "$ASDF_KAFKA_ERROR" ]]; then
+	rm -rf $ASDF_INSTALL_PATH
+
+	echo "---- ASDF KAFKA ERROR ----"
+	echo "asdf kafka failed while $ASDF_KAFKA_ERROR"
+	echo "----"
+fi
+unset ASDF_KAFKA_ERROR
