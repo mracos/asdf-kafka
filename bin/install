@@ -15,6 +15,9 @@ install_kafka() {
 
 	unpack_kafka $dir
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
+
+	build_kafka $dir
+	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 }
 
 archive_contents() {
@@ -90,6 +93,19 @@ unpack_kafka() {
 		local dist=$(find -name kafka* -printf '%f')
 		mv $dist/* .
 		rm -r $dist
+	}; cd $origin
+}
+
+build_kafka() {
+	local dir=$1
+
+	local origin=$(pwd)
+	cd $dir; {
+		gradle
+		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="preparing kafka build"
+
+		./gradlew jar
+		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="building kafka"
 	}; cd $origin
 }
 

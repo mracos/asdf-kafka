@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [[ -z $KAFKA_CONFIG ]] ; then
+  export KAFKA_CONFIG=$ASDF_INSTALL_PATH/config
+fi
