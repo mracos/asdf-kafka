@@ -8,57 +8,24 @@ install_kafka() {
 	local version=$1
 	local dir=$2
 
-	local variant=$(get_variant $version)
+	read -r scala_version release <<< $(echo $version | sed -e 's|-| |')
 
-	download_kafka $version $variant $dir
+	download_kafka $scala_version $release $dir
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 
 	unpack_kafka $dir
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
-
-	build_kafka $dir
-	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
-}
-
-archive_contents() {
-	local version=$1
-
-	curl https://archive.apache.org/dist/kafka/$version/ -silent \
-		| grep '.*href="kafka.*tgz".*' \
-		| sed -e 's|.*href="\(kafka.*tgz\)".*|\1|'
-}
-
-archive_dists() {
-	local contents=$1
-
-	echo $contents \
-		| sed -e 's| kafka_[-\.0-9]*site-docs\.tgz||' \
-		| sed -e 's| kafka_[-\.0-9]*src\.tgz||'
-}
-
-most_recent_dist() {
-	local dists=$1
-
-	local rev=$(for dist in $dists; do echo $dist; done | tac)
-	echo $rev | cut -d' ' -f1
-}
-
-get_variant() {
-	local version=$1
-
-	local contents=$(archive_contents $version)
-	local dists=$(archive_dists $contents)
-	most_recent_dist $dists
 }
 
 # Download kafka from Apache.
 download_kafka() {
-	local version=$1
-	local variant=$2
+	local scala_version=$1
+	local release=$2
 	local dir=$3
 
 	local base=http://archive.apache.org/dist/kafka
-	local url=$base/$version/$variant
+	local variant=kafka_$scala_version'-'$release.tgz
+	local url=$base/$release/$variant
 
 	echo "---- ASDF KAFKA MESSAGE ----"
 	echo "downloading: $url"
@@ -93,19 +60,6 @@ unpack_kafka() {
 		local dist=$(find -name kafka* -printf '%f')
 		mv $dist/* .
 		rm -r $dist
-	}; cd $origin
-}
-
-build_kafka() {
-	local dir=$1
-
-	local origin=$(pwd)
-	cd $dir; {
-		gradle
-		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="preparing kafka build"
-
-		./gradlew jar
-		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="building kafka"
 	}; cd $origin
 }
 

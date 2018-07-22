@@ -1,15 +1,21 @@
 #!/bin/env bash
 
 all_releases() {
-  echo $(
-    curl https://archive.apache.org/dist/kafka/ --silent \
-      | grep 'folder.gif' \
-      | sed -e 's|.*href="\(.*\)/".*|\1|' \
-  )
+	curl https://archive.apache.org/dist/kafka/ --silent \
+		| grep 'folder.gif' \
+		| sed -e 's|.*href="\(.*\)/".*|\1|'
 }
 
-recent_releases() {
-  all_releases | sed -e 's| old_releases||g'
+release_versions() {
+	while read release; do
+		curl https://archive.apache.org/dist/kafka/$release/ -silent \
+			| grep '.*href="kafka_[0-9\.]*-[0-9\.]*\.tgz".*' \
+			| sed -e 's|.*href="kafka_\([0-9\.]*-[0-9\.]*\)\.tgz".*|\1|'
+	done
 }
 
-recent_releases
+drop_old_releases() {
+	sed -e 's| old_releases||g'
+}
+
+echo $(all_releases | release_versions)
