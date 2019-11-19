@@ -10,10 +10,10 @@ install_kafka() {
 
 	read -r scala_version release <<< $(echo $version | sed -e 's|-| |')
 
-	download_kafka $scala_version $release $dir
+	download_kafka "$scala_version" "$release" "$dir"
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 
-	unpack_kafka $dir $version
+	unpack_kafka "$dir" "$version"
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 }
 
@@ -24,8 +24,8 @@ download_kafka() {
 	local dir=$3
 
 	local base=http://archive.apache.org/dist/kafka
-	local variant=kafka_$scala_version'-'$release.tgz
-	local url=$base/$release/$variant
+	local variant="kafka_$scala_version-$release.tgz"
+	local url="$base/$release/$variant"
 
 	echo "---- ASDF KAFKA MESSAGE ----"
 	echo "downloading: $url"
@@ -34,7 +34,7 @@ download_kafka() {
 		--silent \
 		--retry 3 \
 		--retry-delay 3 \
-		-o $dir/$variant $url
+		-o "$dir/$variant" "$url"
 
 	[[ $? != 0 ]] && ASDF_KAFKA_ERROR="downloading kafka dist"
 }
@@ -48,11 +48,12 @@ download_kafka() {
 unpack_kafka() {
 	local dir=$1
 	local version=$2
-	local archive=$dir/kafka_$version.tgz
 
-	tar -xzf $archive -C $dir --strip-components=1
+	local archive="$dir/kafka_$version.tgz"
+
+	tar -xzf "$archive" -C "$dir" --strip-components=1
 	[[ $? == 0 ]] || ASDF_KAFKA_ERROR="expanding kafka dist"
-	rm $archive
+	rm "$archive"
 }
 
 #
