@@ -13,7 +13,7 @@ install_kafka() {
 	download_kafka $scala_version $release $dir
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 
-	unpack_kafka $dir
+	unpack_kafka $dir $version
 	[[ -z "$ASDF_KAFKA_ERROR" ]] || return
 }
 
@@ -47,20 +47,12 @@ download_kafka() {
 # TODO: Should be sanitized with error reporting.
 unpack_kafka() {
 	local dir=$1
+	local version=$2
+	local archive=$dir/kafka_$version.tgz
 
-	local origin=$(pwd)
-	cd $dir; {
-		local archive=$(find -name kafka*tgz -printf '%f')
-
-		tar -xzf $archive
-		[[ $? == 0 ]] || ASDF_KAFKA_ERROR="expanding kafka dist"
-
-		rm $archive
-
-		local dist=$(find -name kafka* -printf '%f')
-		mv $dist/* .
-		rm -r $dist
-	}; cd $origin
+	tar -xzf $archive -C $dir --strip-components=1
+	[[ $? == 0 ]] || ASDF_KAFKA_ERROR="expanding kafka dist"
+	rm $archive
 }
 
 #
@@ -74,5 +66,8 @@ if ! [[ -z "$ASDF_KAFKA_ERROR" ]]; then
 	echo "---- ASDF KAFKA ERROR ----"
 	echo "asdf kafka failed while $ASDF_KAFKA_ERROR"
 	echo "----"
+else
+	echo "---- ASDF KAFKA INSTALL SUCCESS --"
 fi
+
 unset ASDF_KAFKA_ERROR
